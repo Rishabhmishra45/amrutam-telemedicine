@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  PATIENT
+  DOCTOR
+  ADMIN
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+model User {
+  id           String         @id @default(uuid())
+  name         String
+  email        String         @unique
+  passwordHash String
+  phone        String?        @unique
+  role         UserRole       @default(PATIENT)
+  doctor       DoctorProfile?
+  appointments Appointment[]  @relation("PatientAppointments")
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}
+
+model DoctorProfile {
+  id             String       @id @default(uuid())
+  userId         String       @unique
+  specialization String
+  qualification  String
+  consultationFee Decimal     @db.Decimal(10, 2)
+  isAvailable    Boolean      @default(true)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  appointments   Appointment[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model Appointment {
+  id        String            @id @default(uuid())
+  patientId String
+  doctorId  String
+  startsAt  DateTime
+  endsAt    DateTime
+  status    AppointmentStatus @default(PENDING)
+  reason    String?
+  patient   User              @relation("PatientAppointments", fields: [patientId], references: [id])
+  doctor    DoctorProfile     @relation(fields: [doctorId], references: [id])
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  @@index([patientId, startsAt])
+  @@index([doctorId, startsAt])
+}
